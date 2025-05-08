@@ -7,7 +7,6 @@ import android.app.Service
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationCompat
 import java.io.File
 
