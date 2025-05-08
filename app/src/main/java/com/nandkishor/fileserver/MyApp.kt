@@ -15,6 +15,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -25,7 +26,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -49,6 +52,8 @@ fun MyApp(activity: ComponentActivity) {
     val coroutineScope = rememberCoroutineScope()
     val isRunningFlow = ServerPrefs.isServerRunningFlow(context)
     val isRunning by isRunningFlow.collectAsState(initial = false)
+    val clipboardManager = LocalClipboardManager.current
+    val serverPath = "http://$ipAddress:$port"
 
     LaunchedEffect(Unit) {
         if (!hasStoragePermissions(context)) {
@@ -120,7 +125,14 @@ fun MyApp(activity: ComponentActivity) {
             }
             Spacer(Modifier.padding(vertical = 16.dp))
             if (isRunning) {
-                Text("Server running at:\nhttp://$ipAddress:$port")
+                TextButton(
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString(serverPath))
+                    }
+                ) {
+                    Text("Server running at:\n$serverPath")
+                }
+//                Text("Server running at:\nhttp://$ipAddress:$port")
                 Spacer(Modifier.padding(vertical = 8.dp))
                 Text("Serving files from:\n${rootPath}")
             } else {
