@@ -5,14 +5,23 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,11 +36,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.nandkishor.fileserver.qr.QrCodeView
 import com.nandkishor.fileserver.server.FileServerService
 import com.nandkishor.fileserver.server.ServerPrefs
 import com.nandkishor.fileserver.server.getLocalIpAddress
@@ -44,7 +57,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 @Composable
-fun MyApp(activity: ComponentActivity) {
+fun MyApp(activity: ComponentActivity, innerPadding: PaddingValues) {
     val context = LocalContext.current
     val port = 3825
     val ipAddress = remember { getLocalIpAddress(activity) }
@@ -54,6 +67,7 @@ fun MyApp(activity: ComponentActivity) {
     val isRunning by isRunningFlow.collectAsState(initial = false)
     val clipboardManager = LocalClipboardManager.current
     val serverPath = "http://$ipAddress:$port"
+    val screenWidth = LocalConfiguration.current.smallestScreenWidthDp
 
     LaunchedEffect(Unit) {
         if (!hasStoragePermissions(context)) {
@@ -83,27 +97,77 @@ fun MyApp(activity: ComponentActivity) {
     val rootPath = rootDirState?.absolutePath ?: ""
 
 
-    if (rootPath.isBlank()){
+    if (rootPath.isBlank()) {
         Column(
-            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxSize(),
         ) {
             CircularProgressIndicator()
             Spacer(Modifier.padding(24.dp))
             Text("Setting up File System...")
         }
     } else {
-
         Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.inverseOnSurface)
         ) {
-            Text("📂 File Server", style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.padding(vertical = 16.dp))
+            if (isRunning) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceAround,
+                    modifier = Modifier
+                        .padding(top = 64.dp)
+                        .size((0.9 * screenWidth).dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                ) {
+                    Text(
+                        "Serving path:\n$rootPath",
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .padding(vertical = 8.dp)
+                    )
+                    QrCodeView(serverPath)
+                    TextButton(
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(serverPath))
+                            Toast.makeText(
+                                context,
+                                "Server path copied: \n$serverPath",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        },
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "$serverPath   ",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Icon(
+                            painterResource(R.drawable.copy),
+                            "copy",
+                            modifier = Modifier.fillMaxHeight()
+                        )
+                    }
+                }
+            } else {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .padding(top = 64.dp)
+                        .size((0.9 * screenWidth).dp)
+                ) {
+                    Text(" Server Not Running!!!", style = MaterialTheme.typography.titleLarge)
+                }
+            }
             Button(
                 onClick = {
                     val serviceIntent = Intent(context, FileServerService::class.java).apply {
@@ -119,24 +183,12 @@ fun MyApp(activity: ComponentActivity) {
                     coroutineScope.launch {
                         ServerPrefs.setServerRunning(context, !isRunning)
                     }
-                }
+                },
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .padding(bottom = 128.dp)
             ) {
-                Text(if (isRunning) "Stop Server" else "Start Server")
-            }
-            Spacer(Modifier.padding(vertical = 16.dp))
-            if (isRunning) {
-                TextButton(
-                    onClick = {
-                        clipboardManager.setText(AnnotatedString(serverPath))
-                    }
-                ) {
-                    Text("Server running at:\n$serverPath")
-                }
-//                Text("Server running at:\nhttp://$ipAddress:$port")
-                Spacer(Modifier.padding(vertical = 8.dp))
-                Text("Serving files from:\n${rootPath}")
-            } else {
-                Text("Server is stopped")
+                Text(if (!isRunning) "Start Server" else " Stop Server")
             }
         }
     }

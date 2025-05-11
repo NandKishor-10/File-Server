@@ -66,5 +66,5 @@ dependencies {
 
     implementation(libs.nanohttpd)
     implementation(libs.androidx.datastore.preferences)
-
+    implementation(libs.zxing)
 }
